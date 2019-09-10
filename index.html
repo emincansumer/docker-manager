@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Docker Manager</title>
+</head>
+<body>
+    <h2>Containers</h2>
+    <pre id="containers"></pre>
+    <p id="delete-containers"><button onclick="deleteContainers()">Delete All Containers</button></p>
+    <h2>Images</h2>
+    <pre id="images"></pre>
+    <p id="delete-images"><button onclick="deleteImages()">Delete All Images</button></p>
+
+    <script>
+    const Shell = require('node-powershell');
+    const ps = new Shell({
+        executionPolicy: 'Bypass',
+        noProfile: true
+      });
+
+    loadData();
+
+    function loadData() {
+      loadContainers();
+    }
+
+    function loadContainers() {
+      invokeCommand('docker container ls -a', 
+        function(output) {
+          document.getElementById('containers').innerHTML = output;
+          loadImages(ps);
+        }
+      );
+    }
+
+    function loadImages() {
+      invokeCommand('docker image ls', 
+        function(output) {
+          document.getElementById('images').innerHTML = output;
+        }
+      );
+    }
+
+    function deleteImages() {
+      invokeCommand('docker image ls -q', 
+        function(output) {
+          if (output != '') {
+            var imageIds = output.split('\n');
+            for (var i = imageIds.length - 1; i >= 0; i--) {
+              deleteImage(imageIds[i]);
+            }
+            loadImages();
+            alert('All images deleted');
+          }
+        }
+      );
+    }
+
+    function deleteImage(imageId) {
+      if (imageId == '') {
+        return;
+      }
+      invokeCommand('docker image rm -f ' + imageId, 
+        function(output) {
+          console.log(output);
+        }
+      );
+    }
+
+    function deleteContainers() {
+      invokeCommand('docker container ls -a -q ', 
+        function(output) {
+          if (output != '') {
+            var containerIds = output.split('\n');
+            for (var i = containerIds.length - 1; i >= 0; i--) {
+              deleteContainer(containerIds[i]);
+            }
+            loadContainers();
+            alert('All containers deleted');
+          }
+        }
+      );
+    }
+
+    function deleteContainer(containerId) {
+      if (containerId == '') {
+        return;
+      }
+      invokeCommand('docker container rm -f ' + containerId, 
+        function(output) {
+          console.log(output);
+        }
+      );
+    }
+
+    function invokeCommand(command, callback) {
+      ps.addCommand(command);
+      ps.invoke()
+        .then(output => callback(output))
+        .catch(err => {
+          console.error(err);
+        });
+    }
+</script>
+
+</body>
+</html>
